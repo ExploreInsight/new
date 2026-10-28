@@ -1,0 +1,16 @@
+# Build
+.build/
+.swiftpm/
+DerivedData/
+*.xcodeproj/
+xcuserdata/
+
+# macOS
+.DS_Store
+
+# Secrets
+.env*
+
+# Reference screenshots from the `clone` skill. They show another app's UI,
+# so keep them out of the repo.
+docs/screens/*.png
