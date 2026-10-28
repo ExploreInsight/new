@@ -1,6 +1,7 @@
 import AppKit
 import SwiftData
 import SwiftUI
+import SnapperKit
 
 // Snapper
 //   Snapper                      the app
@@ -14,31 +15,61 @@ import SwiftUI
 @main
 struct SnapperApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+    @StateObject private var windows = WindowManager()
     @State private var model = AppModel(container: Store.makeContainer())
 
     var body: some Scene {
         Window("Snapper", id: "main") {
             ContentView()
                 .environment(model)
+                .environmentObject(windows)
                 .themed()
                 .overlay { if GridOverlay.enabled { GridOverlay() } }
                 .frame(minWidth: 760, minHeight: 480)
         }
         .modelContainer(model.container)
-        .defaultSize(width: 1100, height: 720)
+        .defaultSize(width: 880, height: 640)
         .windowToolbarStyle(.unified)
         .commands {
-            SidebarCommands()
             ToolbarCommands()
-            CommandGroup(replacing: .newItem) {
-                Button("New Item") { model.addItem() }
-                    .keyboardShortcut("n")
+            CommandGroup(replacing: .newItem) {}
+            CommandMenu("Windows") {
+                Button("Show Window Overview") { windows.showOverview() }
+                    .keyboardShortcut(.space, modifiers: [.control, .option])
+                Button("Refresh Windows") { windows.refresh() }.keyboardShortcut("r")
+                Button("Switch to Selected Window") { windows.focus() }
+                    .keyboardShortcut("s", modifiers: [.command, .option])
+                    .disabled(windows.selected == nil || windows.isDemo)
+                Divider()
+                ForEach(WindowLayout.allCases) { layout in
+                    Button(layout.title) { windows.arrange(layout) }
+                        .keyboardShortcut(layout == .left ? .leftArrow : layout == .right ? .rightArrow : .return,
+                                          modifiers: [.command, .option])
+                        .disabled(windows.selected == nil || windows.isDemo)
+                }
+                Button("Restore Window") { windows.restore() }
+                    .keyboardShortcut("r", modifiers: [.command, .option])
+                    .disabled(!windows.canRestore || windows.isDemo)
             }
+        }
+
+        MenuBarExtra("Snapper", systemImage: "macwindow.on.rectangle") {
+            Button("Show Window Overview (⌃⌥Space)") { windows.showOverview() }
+            Divider()
+            ForEach(WindowLayout.allCases) { layout in
+                Button(layout.title) { windows.arrangeFocused(layout) }
+                    .disabled(windows.selected == nil || windows.isDemo)
+            }
+            Button("Restore Window") { windows.restoreFocused() }.disabled(!windows.hasRestorableWindow)
+            Divider()
+            SettingsLink()
+            Button("Quit Snapper") { NSApp.terminate(nil) }.keyboardShortcut("q")
         }
 
         Settings {
             SettingsView()
                 .environment(model)
+                .environmentObject(windows)
                 .themed()
         }
         .windowResizability(.contentSize)
@@ -52,7 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate()
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     /// The self-test's result becomes the exit code, after a normal quit.
     func applicationWillTerminate(_ notification: Notification) {
@@ -65,6 +96,12 @@ enum Store {
     /// True when APP_STORE points somewhere else (tests, snapshots, seed data).
     static var isOverridden: Bool {
         !(ProcessInfo.processInfo.environment["APP_STORE"] ?? "").isEmpty
+    }
+
+    static var isTemporary: Bool {
+        guard let path = ProcessInfo.processInfo.environment["APP_STORE"] else { return false }
+        let resolved = URL(fileURLWithPath: path).resolvingSymlinksInPath().path
+        return resolved.hasPrefix("/private/tmp/") || resolved.hasPrefix("/tmp/")
     }
 
     static var url: URL {

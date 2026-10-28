@@ -9,7 +9,7 @@
 set -euo pipefail
 here=${0:A:h}
 name="Snapper"
-scratch="$HOME/Library/Developer/$name/build"
+scratch="${SNAPPER_BUILD_DIR:-$HOME/Library/Developer/$name/build}"
 config=release
 [[ " $* " == *" --debug "* ]] && config=debug
 
@@ -21,7 +21,10 @@ if [[ -z "$identity" ]]; then
 fi
 [[ -n "$identity" ]] || identity=-
 
-swift build -c $config --package-path "$here" --scratch-path "$scratch" 2>&1 | grep -E "error|warning|Build complete" | grep -v "^\[" || true
+swift_options=(--cache-path "$scratch/cache" --config-path "$scratch/config" --security-path "$scratch/security")
+# Useful when the host already provides the process sandbox (for example CI).
+[[ "${SNAPPER_DISABLE_SWIFTPM_SANDBOX:-0}" == 1 ]] && swift_options+=(--disable-sandbox)
+swift build -c $config --package-path "$here" --scratch-path "$scratch" "${swift_options[@]}"
 bin="$scratch/$config/$name"
 [[ -x "$bin" ]] || { echo "build failed"; exit 1; }
 # swift build can report success while an edited file failed to compile. Catch that.
@@ -32,8 +35,8 @@ if [[ -n "$stale" ]]; then
   exit 1
 fi
 
-app="$HOME/Applications/$name.app"
-mkdir -p "$HOME/Applications"
+app="${SNAPPER_APP_PATH:-$HOME/Applications/$name.app}"
+mkdir -p "${app:h}"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin" "$app/Contents/MacOS/$name"
@@ -47,7 +50,7 @@ if [[ -d "$here/Icon/AppIcon.icon" ]]; then
   cp -X "$car" "$here/Resources/AppIcon.icns" "$app/Contents/Resources/"
 fi
 xattr -cr "$app"
-codesign --force --sign "$identity" "$app" 2>&1 | grep -v "replacing existing signature" || true
+codesign --force --sign "$identity" "$app"
 echo "installed $app (signed: ${identity})"
 
 if [[ " $* " == *" --open "* ]]; then

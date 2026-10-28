@@ -18,23 +18,10 @@ final class Item {
 
 /// The sidebar pages. Snapshot mode walks through every case.
 enum SidebarItem: String, CaseIterable, Identifiable {
-    case all, starred
-
+    case all
     var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .all: "All Items"
-        case .starred: "Starred"
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .all: "tray"
-        case .starred: "star"
-        }
-    }
+    var title: String { "Windows" }
+    var symbol: String { "macwindow.on.rectangle" }
 }
 
 /// App-wide state that menus, toolbars, and views share.
@@ -54,7 +41,6 @@ final class AppModel {
 
     func addItem(title: String = "") {
         let item = Item(title: ItemTitle.clean(title))
-        if sidebar == .starred { item.isStarred = true }
         container.mainContext.insert(item)
         selection = item.id
     }

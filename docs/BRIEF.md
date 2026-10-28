@@ -2,6 +2,23 @@
 
 A menu bar window manager for macOS that puts every open window in one Mission-Control-style panel, so you can switch, close, or arrange them without hunting.
 
+## Baseline decision (28 October 2026)
+
+Start with a searchable window overview, optional snapshot previews, left/right
+halves, maximize, and restore. This is for one roughly 22-inch monitor: keep
+one or two working windows readable and find the others quickly. The baseline
+uses Control–Option–Space, not a hold-to-switch trigger. The sections below
+remain the longer-term product direction; README describes shipped behavior.
+
+## Design plan
+
+- Archetype: one window overview plus a menu bar menu and native Settings.
+- Information architecture: window list; Settings → General and Appearance.
+- Command map: Control–Option–Space overview; Option–Command–arrows halves;
+  Option–Command–Return maximize; Option–Command–R restore; Command–R refresh.
+- Empty state: explain Accessibility and invite opening an app window or refreshing.
+- Feeling: calm; fit a few useful windows rather than squeezing everything in.
+
 ## Replaces
 Wins (paid), AltTab, Magnet, Rectangle, and the habit of dragging windows by hand.
 

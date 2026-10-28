@@ -54,11 +54,24 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 }
 
 struct GeneralSettings: View {
-    @AppStorage("confirmDelete") private var confirmDelete = true
+    @EnvironmentObject private var windows: WindowManager
 
     var body: some View {
-        Section("Items") {
-            Toggle("Ask before deleting items", isOn: $confirmDelete)
+        Section("Permissions") {
+            LabeledContent("Accessibility", value: windows.accessibility ? "On" : "Off")
+            Text("Required to list, focus, and arrange app windows.").foregroundStyle(.secondary)
+            Button("Open Accessibility") { windows.openPermission("Privacy_Accessibility") }
+            LabeledContent("Screen Recording", value: windows.screenRecording ? "On" : "Off")
+            Text("Optional. Enables window pictures, held only in memory.").foregroundStyle(.secondary)
+            Button("Open Screen Recording") { windows.openPermission("Privacy_ScreenCapture") }
+        }
+        Section("Shortcuts") {
+            LabeledContent("Show window overview", value: "⌃⌥Space")
+            LabeledContent("Left / right half", value: "⌥⌘← / →")
+            LabeledContent("Maximize", value: "⌥⌘Return")
+            LabeledContent("Restore", value: "⌥⌘R")
+            Text("Snap shortcuts act on the focused app window. In Snapper, they act on the selected window.")
+                .foregroundStyle(.secondary)
         }
     }
 }

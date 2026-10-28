@@ -1,91 +1,87 @@
 # Snapper
 
-A native macOS window manager. Every open window in one Mission-Control-style
-panel, so you can switch, close, or arrange them without hunting.
+A personal macOS window manager for a crowded screen. Find a window, give it
+half the screen or maximize it, and restore it when you are done.
 
-Built with the [BAMA](https://github.com/daveebbelaar/bama) skills, vendored
-into `.claude/skills/` so everyone on the team gets them automatically on clone.
+## Working baseline
 
-## What it does
+- A searchable overview lists individual app windows, including multiple
+  windows of the same app. Select a row and use Switch or an arrangement button.
+- Left Half, Right Half, and Maximize use the display's usable area, leaving
+  the menu bar and Dock clear, with an 8 pt gap.
+- Restore remembers the frame before the first snap, for this app session.
+- Optional window pictures use ScreenCaptureKit. They refresh when you open
+  or refresh the overview, stay in memory, and are cleared when disabled.
+  Capture is limited to the first 24 windows and 440 × 280 px per picture.
+- A menu bar menu keeps the overview available after closing its window.
+- Settings explains Accessibility, optional Screen Recording, and shortcuts.
 
-1. Hold ⌥ (or ⌘) and press Tab to open a panel of every window on this Space,
-   with live previews. Release to focus one, press ⌘W to close it, ⌘Q to quit
-   its app.
-2. Snap the focused window to the left half, the right half, or full screen
-   with a shortcut, and send it to the next display.
-3. Change every shortcut, the accent color, and the snap widths in Settings.
+| Action | Global shortcut |
+| --- | --- |
+| Show overview | Control–Option–Space |
+| Snap focused window left | Option–Command–Left Arrow |
+| Snap focused window right | Option–Command–Right Arrow |
+| Maximize focused window | Option–Command–Return |
+| Restore focused window | Option–Command–R |
 
-The reference is [Wins](https://wins.cool), which costs money. This is the
-free version, built for one person.
+While Snapper is in front, arrangement shortcuts act on its selected window.
+Command–R refreshes the list; Option–Command–S switches to the selected window.
+The menu bar's arrangement actions use the focused external window.
 
-## Layout
+## Build and use
 
-```
-.claude/skills/     the BAMA skill pack (21 skills), vendored and adapted
-specs/              build plans this app grew out of
-docs/
-  BRIEF.md          what the app is, in one page
-  STORIES.md        the backlog, 23 stories in milestones
-  SPEC-switcher.md  the switcher spec
-  SPEC-snapper.md   the snapping spec
-Sources/Snapper/    the app
-Sources/SnapperKit/ rules and data logic, no SwiftUI, so tests run fast
-tools/              build, snapshot, self-test, grid-lint scripts
-build.sh            swift build → .app bundle → codesign → ~/Applications
-```
+Requires macOS 26+ and full Xcode, including its Swift toolchain.
 
-## Build and check
-
-```bash
-./build.sh --open                     # build, install to ~/Applications, launch
-swift test --scratch-path ~/Library/Developer/Snapper/test-build
-tools/selftest.sh                    # exit 0 when every check passes
-tools/snap.sh                        # light + dark PNGs of every page
-tools/grid-lint.sh                   # spacing on the 4 pt grid
+```sh
+./build.sh --open
 ```
 
-A change is done when the build has no errors, the grid checks pass, and you
-have looked at the light and dark snapshots.
+Allow **Snapper** in System Settings → Privacy & Security → Accessibility.
+It is required to list and arrange windows. The status refreshes automatically.
+Screen Recording is optional: enable it and turn on Previews if you want pictures.
+No Input Monitoring permission is needed for this baseline.
 
-## Setup
+A stable Apple Development signing certificate is recommended. The build
+selects one automatically, or signs ad hoc when none is available. Ad hoc
+rebuilds can require granting permissions again.
 
-Building needs the **full Xcode** toolchain. The Command Line Tools alone are
-not enough: Swift 6.4 turned `@State` into a compiler macro, and the macro
-plugin ships inside Xcode.app only.
+## Verification
 
-```bash
-brew install xcodes
-xcodes install 26.6 --no-superuser --empty-trash
-sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+```sh
+swift test --scratch-path /tmp/Snapper-test-build
+tools/selftest.sh
+tools/snap.sh
+tools/grid-lint.sh
+swift tools/check-layout.swift /tmp/Snapper-shots/*-layout.json
 ```
 
-Simulator runtimes are not needed. The app is native macOS only.
+Self-tests and snapshots use a temporary store and sample windows. They never
+register global shortcuts or control other apps. `docs/BASELINE.md` records
+verification results and remaining manual checks.
 
-### Signing matters here
+Build location overrides: `SNAPPER_BUILD_DIR` and `SNAPPER_APP_PATH`.
+For hosts already running inside a process sandbox,
+`SNAPPER_DISABLE_SWIFTPM_SANDBOX=1` disables only SwiftPM's nested sandbox.
 
-This app moves other apps' windows, so it needs **Accessibility**, **Screen
-Recording**, and **Input Monitoring**. macOS stores those grants per code
-signature and path. With ad-hoc signing, every rebuild wipes them and you
-re-grant by hand.
+## Limits and next steps
 
-Create one "Apple Development" certificate and keep it:
+This is a normal window overview, not a hold-and-release Alt–Tab replacement.
+The list includes standard, non-minimized windows exposed by Accessibility;
+availability across Spaces depends on the app. Full-screen and fixed-size
+windows may refuse arrangement. Some apps enforce a minimum width larger
+than half a small display. Refresh after opening or closing external windows.
+Previews are snapshots, not continuous video.
 
-> Xcode → Settings → Accounts → + → Apple ID → Manage Certificates → Create
-> "Apple Development"
+Saved groups, arranging multiple windows in one action, configurable shortcuts,
+thirds/quarters, and a drag-to-layout overlay are future work. The original
+M1/M2 stories in `docs/STORIES.md` remain the longer-term plan.
 
-`build.sh` picks the first Apple Development certificate in the keychain
-automatically. Install to the same path every time, and do not enable the App
-Sandbox: it blocks event taps and other apps' windows.
+## Project
 
-## Skills
+`Sources/Snapper/` contains the SwiftUI app and macOS integrations.
+`Sources/SnapperKit/` contains geometry rules, tested without controlling apps.
+The original SwiftData schema is retained for compatibility with starter stores;
+window positions and pictures are not persisted to that database.
 
-Ask for the step you want, or ask for the `bama` router and it picks the right
-skill for where you are.
-
-Read `.claude/skills/README.md` for what was changed from upstream and how to
-update it.
-
-## License
-
-The vendored skills are MIT, from [daveebbelaar/bama](https://github.com/daveebbelaar/bama).
-See `.claude/BAMA-LICENSE`.
+The 21 [BAMA](https://github.com/daveebbelaar/bama) skills are vendored under
+`.claude/skills/`. See `.claude/skills/README.md` and `.claude/BAMA-LICENSE`.

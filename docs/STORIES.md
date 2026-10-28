@@ -5,7 +5,33 @@ Backlog for Snapper. Each acceptance line says how to check it.
 Sources: `specs/window-switcher.md` and `specs/window-snapper.md`. Stories marked
 "Wins" are the ones Wins 3.6 has and the two specs do not.
 
-## M1 Core loop
+## B0 Personal-use baseline
+
+Status: implemented; verification and manual limits in `BASELINE.md`.
+
+As the user on one small monitor, I find an individual window, switch to it,
+arrange it on either half of the screen or maximize it, and restore its frame.
+
+Acceptance:
+- Search distinguishes multiple windows of the same app.
+- Global shortcuts and menu bar actions arrange the focused external window.
+- Overview buttons arrange its selected window.
+- Repeated snaps keep the frame from before the first snap for Restore.
+- Accessibility guidance appears inline; optional preview permission is separate.
+- Sample mode never registers hotkeys, captures content, or controls app windows.
+- Unit tests cover gaps, display selection, and coordinate conversion.
+
+UX:
+- Flow: overview shortcut → select/search a window → Switch or layout action.
+- Surface: a normal window with a native list and visible arrangement controls;
+  menu bar menu reopens it. Close dismisses the overview; Quit exits the utility.
+- States: no permission with Open Accessibility; no windows; no search matches;
+  preview loading; unavailable preview with app icon; inline operation feedback.
+- Words: Window overview, Switch, Left Half, Right Half, Maximize, Restore, Previews.
+- Access: native list keyboard selection, labeled controls, full titles in tooltips,
+  menu commands with shortcuts, light and dark system styles.
+
+## M1 Core loop (planned hold-to-switch experience)
 
 ### S-001 Open the panel with ⌥Tab
 As the user, I hold ⌥ and press Tab, and a panel shows every window on this Space.

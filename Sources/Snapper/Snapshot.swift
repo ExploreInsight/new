@@ -14,7 +14,7 @@ enum Snapshot {
         let env = ProcessInfo.processInfo.environment
         guard let dir = env["APP_SNAPSHOT"], !dir.isEmpty else { return }
         // Snapshots never run against the real database.
-        guard Store.isOverridden else {
+        guard Store.isTemporary else {
             print("SNAPSHOT refused: set APP_STORE to a file in /tmp")
             NSApp.terminate(nil)
             return
@@ -35,11 +35,11 @@ enum Snapshot {
                 for page in SidebarItem.allCases where only?.contains(page.rawValue) ?? true {
                     model.sidebar = page
                     try? await Task.sleep(for: .seconds(0.8))
-                    capture(to: "\(dir)/\(page.rawValue)-\(mode).png")
+                    await capture(to: "\(dir)/\(page.rawValue)-\(mode).png")
                 }
             }
             if only == nil || only?.contains("settings") == true {
-                let main = NSApp.windows.first { $0.canBecomeMain && !$0.isSheet }
+                let main = NSApp.windows.first { $0.identifier?.rawValue == "main" }
                 openSettings()
                 try? await Task.sleep(for: .seconds(1))
                 for mode in ["light", "dark"] {
@@ -47,8 +47,12 @@ enum Snapshot {
                     for tab in SettingsTab.allCases {
                         model.settingsTab = tab
                         try? await Task.sleep(for: .seconds(0.8))
-                        let settings = NSApp.windows.first { $0.isVisible && $0 !== main && !$0.isSheet }
-                        capture(to: "\(dir)/settings-\(tab.rawValue)-\(mode).png", window: settings)
+                        // MenuBarExtra owns another visible window; never capture its tiny icon.
+                        if let settings = NSApp.windows.first(where: {
+                            $0.isVisible && $0 !== main && $0.identifier?.rawValue.contains("Settings") == true
+                        }) {
+                            await capture(to: "\(dir)/settings-\(tab.rawValue)-\(mode).png", window: settings)
+                        } else { print("SNAPSHOT no Settings window") }
                     }
                 }
             }
@@ -64,7 +68,7 @@ enum Snapshot {
     /// permission for the app that started this one (your terminal, or Claude).
     /// Without it, falls back to drawing the view hierarchy, which leaves
     /// sidebars and glass blank.
-    private static func capture(to path: String, window: NSWindow? = nil) {
+    private static func capture(to path: String, window: NSWindow? = nil) async {
         // Another app can hide this one while snapshots run (computer use hides
         // apps it does not control). Hidden windows cannot be captured.
         if NSApp.isHidden { NSApp.unhideWithoutActivation() }
@@ -75,6 +79,7 @@ enum Snapshot {
         // Active, like a window someone is using: real accent colors and focus rings.
         NSApp.activate()
         window.makeKeyAndOrderFront(nil)
+        try? await Task.sleep(for: .milliseconds(250))
         let size = window.contentView?.bounds.size ?? .zero
         GridProbes.shared.write(to: path.replacingOccurrences(of: ".png", with: "-layout.json"), window: size)
         try? FileManager.default.removeItem(atPath: path)
@@ -89,7 +94,7 @@ enum Snapshot {
                 print("SNAPSHOT \(path)")
                 return
             }
-            Thread.sleep(forTimeInterval: 0.5)
+            try? await Task.sleep(for: .milliseconds(500))
         }
         guard let view = window.contentView?.superview ?? window.contentView,
               let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }

@@ -1,7 +1,7 @@
 #!/bin/zsh
-# Runs the in-app self-test against a fresh store in /tmp. Exit code 0 when every check passed.
-set -u
-rm -rf ~/Library/Saved\ Application\ State/com.exploreinsight.snapper.savedState
+# Run on a temporary store; never reset the user's saved application state.
+set -euo pipefail
+app="${SNAPPER_APP_PATH:-$HOME/Applications/Snapper.app}"
 store=/tmp/Snapper-self.store
-rm -f $store $store-shm $store-wal
-APP_STORE=$store ~/Applications/Snapper.app/Contents/MacOS/Snapper --selftest
+rm -f "$store" "$store-shm" "$store-wal"
+APP_STORE="$store" "$app/Contents/MacOS/Snapper" -ApplePersistenceIgnoreState YES --selftest
